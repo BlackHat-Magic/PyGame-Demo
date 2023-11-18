@@ -20,14 +20,14 @@ class Tile():
             self.possibilities = possibilities
     
     # cell entropy
-    def entropy(self):
+    def entropy(self) -> int:
         # easier if this is a method instead of an attribute
         if(self.biome):
             return(0)
         return(len(self.possibilities))
 
     # collapse the cell
-    def collapse(self, collapse_to: Biome = None):
+    def collapse(self, collapse_to: Biome = None) -> Biome:
         # if no possibilities are left, we can't collapse
         if(not self.possibilities):
             return(None)
@@ -43,7 +43,7 @@ class Tile():
         return(self.biome)
 
     # get cell neighbors
-    def get_neighbors(self):
+    def get_neighbors(self) -> list:
         # allows diagonals
         offsets = [(-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
         neighbors = []
@@ -58,7 +58,7 @@ class Tile():
         return(neighbors)
     
     # update state upon propagation
-    def update_state(self, origin_cell):
+    def update_state(self, origin_cell: tuple) -> bool:
         # store original states
         origin_cell = self.world.grid[origin_cell]
 
@@ -92,7 +92,7 @@ class Tile():
         
         return(self.possibilities != original_possibilities)
     
-    def requirements_met():
+    def requirements_met() -> bool:
         # if the cell hasn't collapsed yet and not all of the possibilities have requirements, the
         # requirements of the cell are met by default, since it's possible that the cell won't have a
         # requirement at all
@@ -126,18 +126,18 @@ class Tile():
 
 class World():
     # init function
-    def __init__(self, name: str = "world", biomes: list = [], size: tuple = (1, 1), pickle = None):
+    def __init__(self, name: str = "world", biomes: list = [], size: tuple = (1, 1), pickle: any = None):
         self.name = name
         self.biomes = biomes
         self.grid = numpy.empty(size, dtype=object)
         for x in range(size[0]):
             for y in range(size[1]):
-                grid[x, y] = Tile(coordinates=(x, y), world=self)
+                self.grid[x, y] = Tile(coordinates=(x, y), world=self)
         # miscellaneous data
         self.pickle = pickle
 
     # observe the grid
-    def observe(self):
+    def observe(self) -> tuple:
         min_entropy = len(self.biomes)
         lowest_tiles = []
 
@@ -166,7 +166,7 @@ class World():
         return(x, y)
     
     # propagate changes
-    def propagate(self, start_cell):
+    def propagate(self, start_cell: tuple) -> None:
         # queue of cells whose states have changed and therefore need their neighbors'
         # states changed
         queue = deque([start_cell])
@@ -211,3 +211,12 @@ class World():
                         return
                     if(coords not in queue):
                         queue.append(coords)
+    
+    def max_entropy(self) -> int:
+        maximum_entropy = -1
+        for x in range(self.grid.shape[0]):
+            for y in range(self.grid.shape[1]):
+                entropy = self.grid[x, y].entropy()
+                if(entropy > maximum_entropy):
+                    maximum_entropy = entropy
+        return(entropy)

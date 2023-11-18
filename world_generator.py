@@ -29,3 +29,10 @@ volcano.allowed_neighbors = [mountains]
 
 # list of biomes
 biomes = [forest, mountains, plains, desert, swamp, coastal, ocean, taiga, ice, death_ice]
+
+# initialize world
+world = World("map", biomes, (25, 25))
+
+while world.max_entropy() > 0:
+    coords = grid.observe()
+    grid.propagate(coords)

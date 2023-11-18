@@ -43,7 +43,7 @@ class Tile():
         return(self.biome)
 
     # get cell neighbors
-    def getNeighbors(self):
+    def get_neighbors(self):
         # allows diagonals
         offsets = [(-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
         neighbors = []
@@ -58,7 +58,7 @@ class Tile():
         return(neighbors)
     
     # update state upon propagation
-    def updateState(self, origin_cell):
+    def update_state(self, origin_cell):
         # store original states
         origin_cell = self.world.grid[origin_cell]
 
@@ -92,7 +92,7 @@ class Tile():
         
         return(self.possibilities != original_possibilities)
     
-    def requirementsMet():
+    def requirements_met():
         # if the cell hasn't collapsed yet and not all of the possibilities have requirements, the
         # requirements of the cell are met by default, since it's possible that the cell won't have a
         # requirement at all
@@ -111,7 +111,7 @@ class Tile():
 
         # get all the neighbors
         neighbors = []
-        for neighbor in self.getNeighbors():
+        for neighbor in self.get_neighbors():
             if(not neighbor.biome):
                 continue
             neighbors.append(neighbor.biome)
@@ -175,12 +175,12 @@ class World():
         while(queue):
             x, y = queue.popleft()
             target_tile = self.grid[x, y]
-            neighbors = target_tile.getNeighbors()
+            neighbors = target_tile.get_neighbors()
 
             # loop through adjacent cells (including diagonals)
             for neighbor in neighbors:
                 # update possible states
-                updated = neighbor.updateState((x, y))
+                updated = neighbor.update_state((x, y))
 
                 # if we updated, then the updated cell gets added to the queue of cells that need to
                 # propagate
@@ -189,7 +189,7 @@ class World():
             
             # if the cell we're propagating hasn't collapsed or doesn't have a required neighbor or meets
             # its requirements, we're done with it
-            if(target_tile.requirementsMet()):
+            if(target_tile.requirements_met()):
                 continue
             
             # grab target tile

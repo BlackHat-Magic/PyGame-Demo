@@ -95,3 +95,67 @@ def observe(grid):
     chosen_tile = random.choice(lowest_tiles)
     grid[chosen_tile].collapse()
     return(chosen_tile)
+
+# propagate changed tiles
+def propagate(grid, start_cell):
+    # queue of cells whose states have changed and therefore need their neighbors'
+    # states changed
+    queue = deque([start_cell])
+    
+    # while the queue isn't empty
+    while(queue):
+        x, y = queue.popleft()
+
+        # loop through adjacent cells (including diagonals)
+        for x_offset, y_offset in [
+            (-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)
+        ]:
+            adj_x, adj_y = x + x_offset, y + y_offset
+
+            # if attempting to check a cell out of bounds, skip
+            if((not 0 <= adj_x < grid.shape[0]) or (not 0 <= adj_y < grid.shape[1])):
+                continue
+
+            # else update possible states
+            updated = updateStates((x, y), (adj_x, adj_y))
+
+            # if we updated, then the updated cell gets added to the queue of cells that need to
+            # propagate
+            if(updated and (not (adj_x, adj_y) in queue)):
+                queue.append((adj_x, adj_y))
+
+# when a cell is propagated, each neighboring cell 
+def updateStates(grid, x, y, adj_x, adj_y):
+    # store original states
+    target_cell = grid[adj_x, adj_y]
+    origin_cell = grid[x, y]
+
+    original_possibilities = target_cell.possibilities
+
+    # if this cell has already collapsed, we can skip it.
+    if(target_cell.biome):
+        return False
+
+    new_possibilities = set()
+    # if the origin cell collapsed...
+    if(origin_cell.biome):
+        # remove all possibilities that are not allqwowed by the cell who 
+        # triggered the function
+        new_possibilities = set(target_cell.possibilities)
+        new_possibilities.intersection_update(origin_cell.biome.allowed_neighbors)
+    
+    # if the origin cell hasn't collapsed...
+    else:
+        # assemble a set of possibilities allowed by the origin cell
+        for possibility in origin_cell.possibilities:
+            if(not new_possibilities):
+                new_possibilities = set(possibility.allowed_neighbors)
+                continue
+            for neighbor in possibility.allowed_neighbors:
+                new_possibilities.add(neighbor)
+
+    # intersect new possibilities with old ones
+    new_possibilities = set(target_cell.possibilities).intersection(new_possibilities)
+    target_cell.possibilities = list(new_possibilities)
+    
+    return(target_cell.possibilities != original_possibilities)

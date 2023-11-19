@@ -1,10 +1,10 @@
 import pygame, sys
 from wfc_utils import Biome, Tile, World
-from dungeon_generator import rooms
+from dungeon_layout_generator import rooms
 
 # Initialize pygame, window
 pygame.init()
-screen = pygame.display.set_mode((640, 480))
+screen = pygame.display.set_mode((1280, 960))
 pygame.display.set_caption("Pygame Demo")
 clock = pygame.time.Clock()
 
@@ -13,7 +13,7 @@ font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 16)
 text_font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 8)
 
 # background
-background = pygame.Surface((640, 480))
+background = pygame.Surface((1280, 960))
 background.fill("Black")
 
 # character class
@@ -85,12 +85,14 @@ character = Character(surface=font.render("@", False, "White"), name="It's You!"
 enemy = Character(surface=font.render("X", False, "Red"), name="Enemy Dude", pos_x=320, pos_y=240)
 
 # generate dungeon
-# dungeon = []
-# for i in range(10):
-#     dungeon.append(World(f"floor_{i}", rooms, (9, 9)))
+dungeon = []
+for i in range(10):
+    dungeon.append(World(f"floor_{i}", rooms, (5, 5)))
 
-# initialize floor
-floor = World("Floor", rooms, (7, 7))
+for floor in dungeon:
+    floor.generate()
+
+floor = dungeon[0]
 
 # time stuff
 big_t = 0
@@ -137,13 +139,6 @@ while True:
     
     # render background
     screen.blit(background, (0, 0))
-
-    # world gen testing
-    if(big_t >= 100 and not floor.all_collapsed()):
-        big_t = 0
-        observed = floor.observe()
-        if(observed):
-            floor.propagate(observed)
     
     for x in range(floor.grid.shape[0]):
         for y in range(floor.grid.shape[1]):

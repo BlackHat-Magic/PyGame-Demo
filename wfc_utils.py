@@ -9,7 +9,7 @@ class Biome():
         self.required_neighbors = required_neighbors
         self.minimum = minimum
         self.maximum = maximum
-        self.empty = empty
+        self.empty = empty # i forgot why I added this attribute
 
 # tile class
 class Tile():
@@ -186,7 +186,6 @@ class World():
         # if no tiles can be collapsed, return
         if(not lowest_tiles):
             return
-        print(f"collapsing from {len(lowest_tiles)} options")
 
         # else, randomly select a cell to collapse
         x, y = random.choice(lowest_tiles)
@@ -283,4 +282,8 @@ class World():
     
     def generate(self) -> None:
         # soon (TM)
-        pass
+        while not self.all_collapsed():
+            observed = self.observe()
+            if(not observed):
+                continue
+            self.propagate(observed)

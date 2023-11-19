@@ -11,7 +11,7 @@ pre_boss = Biome("Pre-Boss", minimum=1, maximum=1)
 boss = Biome("Boss", minimum=1, maximum=1)
 ending = Biome("Ending", minimum=1, maximum=1)
 
-empty.allowed_neighbors = [empty, trap, combat, treasure, merchant, starter, vacant]
+empty.allowed_neighbors = [empty, trap, combat, treasure, merchant, starter, vacant, ending]
 vacant.allowed_neighbors = [empty, trap, combat, treasure, merchant, starter, vacant]
 trap.allowed_neighbors = [empty, treasure, merchant, starter, vacant]
 combat.allowed_neighbors = [empty, treasure, merchant, starter, vacant]

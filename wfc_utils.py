@@ -3,10 +3,13 @@ from collections import deque
 
 # Biome class
 class Biome():
-    def __init__(self, name, allowed_neighbors: list = [], required_neighbors: list = []):
+    def __init__(self, name, allowed_neighbors: list = [], required_neighbors: list = [], minimum: int = 0, maximum: int = 0, empty: bool = False):
         self.name = name
         self.allowed_neighbors = allowed_neighbors
         self.required_neighbors = required_neighbors
+        self.minimum = minimum
+        self.maximum = maximum
+        self.empty = empty
 
 # tile class
 class Tile():
@@ -40,12 +43,13 @@ class Tile():
         # collapse on chosen possibility
         self.biome = collapse_to
         self.possibilities = [self.biome]
+
         return(self.biome)
 
     # get cell neighbors
     def get_neighbors(self) -> list:
         # allows diagonals
-        offsets = [(-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
+        offsets = [(0, 1), (-1, 0), (1, 0), (0, -1)]
         neighbors = []
 
         # loop through possible offsets
@@ -90,9 +94,9 @@ class Tile():
         new_possibilities = set(self.possibilities).intersection(new_possibilities)
         self.possibilities = list(new_possibilities)
         
-        return(self.possibilities != original_possibilities)
+        return(self.possibilities in original_possibilities)
     
-    def requirements_met() -> bool:
+    def requirements_met(self) -> bool:
         # if the cell hasn't collapsed yet and not all of the possibilities have requirements, the
         # requirements of the cell are met by default, since it's possible that the cell won't have a
         # requirement at all
@@ -114,7 +118,7 @@ class Tile():
         for neighbor in self.get_neighbors():
             if(not neighbor.biome):
                 continue
-            neighbors.append(neighbor.biome)
+            neighbors.append(neighbor)
         
         # loop through all neighbors, if possibilities for a given tile are not all contained in
         # allowed_states, return false
@@ -122,6 +126,12 @@ class Tile():
             possibilities = neighbor.possibilities
             if(not all([possibility in allowed_states for possibility in possibilities])):
                 return(False)
+        
+        neighbor_biomes = [tile.biome for tile in self.get_neighbors()]
+        for biome in self.biome.required_neighbors:
+            if(biome not in neighbor_biomes):
+                return(False)
+
         return(True)
 
 class World():
@@ -132,20 +142,36 @@ class World():
         self.grid = numpy.empty(size, dtype=object)
         for x in range(size[0]):
             for y in range(size[1]):
-                self.grid[x, y] = Tile(coordinates=(x, y), world=self)
+                self.grid[x, y] = Tile((x, y), self, None, biomes)
         # miscellaneous data
         self.pickle = pickle
 
     # observe the grid
-    def observe(self) -> tuple:
+    def observe(self, collapse_to: Biome = None) -> tuple:
         min_entropy = len(self.biomes)
         lowest_tiles = []
+        all_tiles = []
+        for x, column in enumerate(self.grid):
+            for y, tile in enumerate(column):
+                if(tile.biome):
+                    all_tiles.append(tile.biome)
+        
+        need_to_generate = []
+
+        for biome in self.biomes:
+            if(biome.minimum > all_tiles.count(biome)):
+                need_to_generate.append(biome)
+        if(need_to_generate and not collapse_to):
+            collapse_to = random.choice(need_to_generate)
 
         # loop through cells
         for x, row in enumerate(self.grid):
             for y, cell in enumerate(row):
                 entropy = cell.entropy()
-
+                if(entropy == 0):
+                    continue
+                if(collapse_to and not collapse_to in self.grid[x, y].possibilities):
+                    continue
                 # if new lowest entropy, set lowest entropy
                 if(entropy < min_entropy):
                     min_entropy = entropy
@@ -155,14 +181,19 @@ class World():
                 # else if == lowest entropy, add to lowest tiles
                 if(entropy == min_entropy):
                     lowest_tiles.append((x, y))
-        
+                continue
+
         # if no tiles can be collapsed, return
         if(not lowest_tiles):
             return
-        
+        print(f"collapsing from {len(lowest_tiles)} options")
+
         # else, randomly select a cell to collapse
         x, y = random.choice(lowest_tiles)
-        self.grid[x, y].collapse()
+        if(not collapse_to):
+            self.grid[x, y].collapse()
+        else:
+            self.grid[x, y].collapse(collapse_to)
         return(x, y)
     
     # propagate changes
@@ -170,7 +201,7 @@ class World():
         # queue of cells whose states have changed and therefore need their neighbors'
         # states changed
         queue = deque([start_cell])
-        
+
         # while the queue isn't empty
         while(queue):
             x, y = queue.popleft()
@@ -192,25 +223,38 @@ class World():
             if(target_tile.requirements_met()):
                 continue
             
-            # grab target tile
-            required_neighbors = target_tile.biome.required_neighbors
+            # 
+            required_neighbors = []
+            for possibility in target_tile.possibilities:
+                for requirement in possibility.required_neighbors:
+                    required_neighbors.append(requirement)
+
 
             # sort neighbors by entropy
             neighbors = sorted(neighbors, key=lambda neighbor: neighbor.entropy())
 
             # loop through neighbors and collapse as required
-            for tile in neighbors:
-                corods = neighbor.coordinates
-                neighbor = self.grid[coords]
-                for requirement in target_cell.required_neighbors:
-                    if(not requirement in self.grid[coords].possibilities):
+            for neighbor in neighbors:
+                for requirement in required_neighbors:
+                    if(not requirement in neighbor.possibilities):
                         continue
                     result = neighbor.collapse(requirement)
-                    if(not result):
-                        input("We goofed up.")
-                        return
-                    if(coords not in queue):
-                        queue.append(coords)
+                    if(neighbor.coordinates not in queue):
+                        queue.append(neighbor.coordinates)
+                if(target_tile.requirements_met):
+                    break
+        
+        # get biomes who have reached their max
+        flattened = self.grid.flatten()
+        biomes_in_grid = [tile.biome for tile in flattened if tile.biome]
+        maxed = []
+        for biome in self.biomes:
+            if(biome.maximum != 0 and biome.maximum <= biomes_in_grid.count(biome)):
+                maxed.append(biome)
+        for tile in flattened:
+            for biome in maxed:
+                if(not tile.biome and biome in tile.possibilities):
+                    tile.possibilities.remove(biome)
     
     def max_entropy(self) -> int:
         maximum_entropy = -1
@@ -219,4 +263,24 @@ class World():
                 entropy = self.grid[x, y].entropy()
                 if(entropy > maximum_entropy):
                     maximum_entropy = entropy
-        return(entropy)
+        return(maximum_entropy)
+    
+    def min_entropy(self) -> int:
+        minimum_entropy = float("inf")
+        for x in range(self.grid.shape[0]):
+            for y in range(self.grid.shape[1]):
+                entropy = self.grid[x, y].entropy()
+                if(entropy < minimum_entropy):
+                    minimum_entropy = entropy
+        return(minimum_entropy)
+    
+    def all_collapsed(self) -> bool:
+        for x in range(self.grid.shape[0]):
+            for y in range(self.grid.shape[1]):
+                if(not self.grid[x, y].biome):
+                    return(False)
+        return(True)
+    
+    def generate(self) -> None:
+        # soon (TM)
+        pass

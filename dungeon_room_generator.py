@@ -2,22 +2,22 @@ from wfc_utils import Biome, Tile, World
 import numpy, random
 
 sizes = {
-    "Empty": (0, 0),
-    "Vacant": (3, 12),
-    "Trap": (3, 5),
-    "Combat": (3, 12),
-    "Treasure": (3, 3),
-    "Merchant": (5, 5),
-    "Starter": (3, 3),
-    "Pre-Boss": (3, 3),
-    "Boss": (12, 12),
-    "Ending": (3, 3)
+    "Empty": (0, 0, 0, 0),
+    "Vacant": (3, 12, 3, 12),
+    "Trap": (3, 5, 3, 5),
+    "Combat": (3, 12, 3 ,12),
+    "Treasure": (3, 3, 3, 3),
+    "Merchant": (5, 5, 5, 5),
+    "Starter": (3, 3, 3, 3),
+    "Pre-Boss": (3, 3, 3, 3),
+    "Boss": (12, 12, 12, 12),
+    "Ending": (3, 3, 3, 3)
 }
 
 class Room():
-    def __init__(self, max_size: tuple, tile: Tile, target_size: tuple = None):
+    def __init__(self, size: tuple, tile: Tile, target_size: tuple = None):
         # extract data from source tile
-        self.max_width, self.max_height = max_size
+        self.min_width, self.max_width, self.min_height, self.max_height = size
         self.biome = tile.biome
         self.coordinates = tile.coordinates
 
@@ -26,13 +26,13 @@ class Room():
             self.width, self.height = target_size
         else:
             if(self.max_width < 3):
-                self.width = max_size[0]
+                self.width = size[0]
             else:
-                self.width = random.randint(3, self.max_width)
+                self.width = random.randint(self.min_width, self.max_width)
             if(self.max_height < 3):
-                self.height = max_size[1]
+                self.height = size[2]
             else:
-                self.height = random.randint(3, self.max_height)
+                self.height = random.randint(self.min_height, self.max_height)
         
         # generate empty grid
         self.grid = numpy.empty((15, 15), dtype=str)

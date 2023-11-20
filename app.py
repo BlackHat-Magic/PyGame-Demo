@@ -1,6 +1,7 @@
 import pygame, sys
 from wfc_utils import Biome, Tile, World
 from dungeon_layout_generator import rooms
+from dungeon_room_generator import Floor
 
 # Initialize pygame, window
 pygame.init()
@@ -85,39 +86,22 @@ character = Character(surface=font.render("@", False, "White"), name="It's You!"
 enemy = Character(surface=font.render("X", False, "Red"), name="Enemy Dude", pos_x=320, pos_y=240)
 
 # generate dungeon
-dungeon = []
+world_floors = []
 for i in range(10):
-    dungeon.append(World(f"floor_{i}", rooms, (5, 5)))
-
-for floor in dungeon:
+    world_floors.append(World(f"floor_{i}", rooms, (5, 5)))
+for floor in world_floors:
     floor.generate()
-
+dungeon = []
+for i, floor in enumerate(world_floors):
+    dungeon.append(Floor(floor))
 floor = dungeon[0]
 
 # time stuff
 big_t = 0
 dt = 0
 
-# generate tiles for entropy numbers
-entropy_list = []
-for i in range(len(rooms) + 1):
-    string = str(i)
-    surface = text_font.render(string, False, "Gray")
-    entropy_list.append(surface)
-
-letter_dict = {
-    "Empty": text_font.render(".", False, "Gray"),
-    "Trap": text_font.render("T", False, "Orange"),
-    "Combat": text_font.render("C", False, "White"),
-    "Treasure": text_font.render("T", False, "Yellow"),
-    "Merchant": text_font.render("M", False, "Green"),
-    "Starter": text_font.render("$", False, "Purple"),
-    "Pre-Boss": text_font.render("#", False, "Red"),
-    "Boss": text_font.render("B", False, "Red"),
-    "Ending": text_font.render("@", False, "Purple"),
-    "Vacant": text_font.render("V", False, "Gray")
-}
-
+floor_char = font.render(".", False, "Gray")
+wall_char = font.render("#", False, "Gray")
 
 # game loop
 while True:
@@ -142,22 +126,29 @@ while True:
     
     for x in range(floor.grid.shape[0]):
         for y in range(floor.grid.shape[1]):
-            coords = (x * 16, y * 16)
-            if(floor.grid[x, y].biome):
-                screen.blit(letter_dict[floor.grid[x, y].biome.name], coords)
-            else:
-                screen.blit(entropy_list[floor.grid[x, y].entropy()], coords)
+            room = floor.grid[x, y]
+            big_x = x * 15
+            big_y = y * 15
+            for small_x in range(room.grid.shape[0]):
+                for small_y in range(room.grid.shape[1]):
+                    tile = room.grid[small_x, small_y]
+                    coordinates = ((big_x + small_x) * 16, (big_y + small_y) * 16)
+                    if(tile == "w"):
+                        screen.blit(wall_char, coordinates)
+                        continue
+                    if(tile == "f"):
+                        screen.blit(floor_char, coordinates)
 
     # render character
-    # screen.blit(character.surface, character.rectangle())
-    # character.renderBillboard(mouse_pos)
-    # screen.blit(enemy.surface, enemy.rectangle())
-    # enemy.renderBillboard(mouse_pos)
+    screen.blit(character.surface, character.rectangle())
+    character.renderBillboard(mouse_pos)
+    screen.blit(enemy.surface, enemy.rectangle())
+    enemy.renderBillboard(mouse_pos)
 
     # check if player collided with enemy
-    # if(enemy.rectangle().colliderect(character.rectangle())):
-    #     print("Collided")
+    if(enemy.rectangle().colliderect(character.rectangle())):
+        print("Collided")
 
-    # render to window
+    # render to window & handle clock stuff
     pygame.display.update()
     dt = clock.tick(120)

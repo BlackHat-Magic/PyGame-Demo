@@ -15,21 +15,12 @@ screen = pygame.display.set_mode((1280, 960))
 pygame.display.set_caption("Pygame Demo")
 clock = pygame.time.Clock()
 
-# define font
+# define visuals
 font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 16)
-
-# background
-background = pygame.Surface((1280, 960))
+floor_char = font.render(".", False, "Gray")
+wall_char = font.render("#", False, "Gray")
+background = pygame.Surface(pygame.display.get_surface().get_size())
 background.fill("Black")
-
-# character class
-
-# character and enemy
-character = Character(surface=font.render("@", False, "White"), name="It's You!", font=font, screen=screen)
-enemy = Character(surface=font.render("X", False, "Red"), name="Enemy Dude", pos_x=320, pos_y=240, font=font, screen=screen)
-
-# initialize camera
-camera = Camera()
 
 # generate dungeon
 world_floors = []
@@ -42,8 +33,32 @@ for i, floor in enumerate(world_floors):
     dungeon.append(Floor(floor))
 floor = dungeon[0]
 
-floor_char = font.render(".", False, "Gray")
-wall_char = font.render("#", False, "Gray")
+# character and enemy
+character = Character(
+    surface=font.render("@", False, "White"), 
+    name="It's You!", 
+    screen=screen, 
+    font=font
+)
+
+# initialize camera
+camera = Camera()
+
+# move character to starter room
+for room in floor.grid.flatten():
+    if(room.biome.name != "Starter"):
+        continue
+    x, y = room.coordinates
+    center_x, center_y = room.center
+
+    # move to correct grid position
+    character.pos_x = (x * 15 + center_x + 1) * 16
+    character.pos_y = (y * 15 + center_y + 1) * 16
+
+    character.target_pos = (character.pos_x, character.pos_y)
+    width, height = pygame.display.get_surface().get_size()
+    camera.x = character.pos_x - width // 2
+    camera.y = character.pos_y - height // 2
 
 # game loop
 while True:
@@ -59,9 +74,9 @@ while True:
     mouse = pygame.mouse.get_pressed()
 
     if(mouse[0]):
-        target_x, target_y = mouse_pos
-        target_x = target_x // 16 * 16 + 8 - camera.x
-        target_y = target_y // 16 * 16 + 8 - camera.y
+        target_x, target_y = camera.get_mouse_world_position()
+        target_x = (target_x + 8) // 16 * 16
+        target_y = (target_y + 8) // 16 * 16
         character.target_pos = (target_x, target_y)
     character.moveToTarget()
 
@@ -88,14 +103,7 @@ while True:
 
     # render character
     camera.render(screen, character.surface, (character.pos_x, character.pos_y))
-    # camera.render(screen, character.)
     character.renderBillboard(camera)
-    camera.render(screen, enemy.surface, (enemy.pos_x, enemy.pos_y))
-    enemy.renderBillboard(camera)
-
-    # check if player collided with enemy
-    if(enemy.rectangle().colliderect(character.rectangle())):
-        print("Collided")
 
     # render to window & handle clock stuff
     pygame.display.update()

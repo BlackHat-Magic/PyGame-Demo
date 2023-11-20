@@ -35,30 +35,37 @@ class Room():
                 self.height = random.randint(self.min_height, self.max_height)
         
         # generate empty grid
-        self.grid = numpy.empty((15, 15), dtype=str)
-        for space in self.grid.flatten():
-            space = "p"
+        self.grid = numpy.full((15, 15), "p", dtype=str)
         if(self.width == 0 or self.height == 0):
             return
         
         # self center
-        if(self.width >= 12):
-            offset_x = 0
-        else:
-            max_offset_x = max(12 - self.width, 1)
-            offset_x = random.randint(0, max_offset_x)
-        if(self.height >= 12):
-            offset_y = 0
-        else:
-            max_offset_y = max(12 - self.height, 1)
-            offset_y = random.randint(0, max_offset_y)
+        center_x = 7
+        center_y = 7
+
+        # find max offset
+        max_offset_x = (12 - self.width) // 2
+        offset_x = max_offset_x
+        max_offset_y = (12 - self.height) // 2
+        offset_y = max_offset_y
+
+        # offset center
+        if(max_offset_x != 0):
+            offset_x = random.randint(max_offset_x * -1, max_offset_x)
+        if(max_offset_y != 12):
+            offset_y = random.randint(max_offset_y * -1, max_offset_y)
         self.offset = (offset_x, offset_y)
+
+        center_x += offset_x
+        center_y += offset_y
+
+        self.center = (center_x, center_y)
         
         # write spaces to grid
         for x in range(self.width + 2):
             for y in range(self.height + 2):
-                target_x = 6 - (self.width + self.offset[0]) // 2 + x
-                target_y = 6 - (self.height + self.offset[1]) // 2 + y
+                target_x = center_x - self.width // 2 + x
+                target_y = center_y - self.height // 2 + y
                 if(x == 0 or y == 0 or x == self.width + 1 or y == self.height + 1):
                     self.grid[target_x, target_y] = "w"
                     continue

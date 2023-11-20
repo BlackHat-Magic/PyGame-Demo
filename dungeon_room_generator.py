@@ -16,9 +16,12 @@ sizes = {
 
 class Room():
     def __init__(self, max_size: tuple, tile: Tile, target_size: tuple = None):
+        # extract data from source tile
         self.max_width, self.max_height = max_size
         self.biome = tile.biome
         self.coordinates = tile.coordinates
+
+        # set self size
         if(target_size):
             self.width, self.height = target_size
         else:
@@ -30,15 +33,32 @@ class Room():
                 self.height = max_size[1]
             else:
                 self.height = random.randint(3, self.max_height)
+        
+        # generate empty grid
         self.grid = numpy.empty((15, 15), dtype=str)
         for space in self.grid.flatten():
             space = "p"
         if(self.width == 0 or self.height == 0):
             return
+        
+        # self center
+        if(self.width >= 12):
+            offset_x = 0
+        else:
+            max_offset_x = max(12 - self.width, 1)
+            offset_x = random.randint(0, max_offset_x)
+        if(self.height >= 12):
+            offset_y = 0
+        else:
+            max_offset_y = max(12 - self.height, 1)
+            offset_y = random.randint(0, max_offset_y)
+        self.offset = (offset_x, offset_y)
+        
+        # write spaces to grid
         for x in range(self.width + 2):
             for y in range(self.height + 2):
-                target_x = 6 - self.width // 2 + x
-                target_y = 6 - self.height // 2 + y
+                target_x = 6 - (self.width + self.offset[0]) // 2 + x
+                target_y = 6 - (self.height + self.offset[1]) // 2 + y
                 if(x == 0 or y == 0 or x == self.width + 1 or y == self.height + 1):
                     self.grid[target_x, target_y] = "w"
                     continue

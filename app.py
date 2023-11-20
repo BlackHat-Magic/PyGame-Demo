@@ -25,8 +25,8 @@ class Character():
         self.surface = surface
         self.target_pos = (self.pos_x, self.pos_y)
         self.health = 100
-        self.name_tag = text_font.render(name, False, "Black")
-        self.health_tag = text_font.render("H: 100/100", False, "Black")
+        self.name_tag = font.render(name, False, "Black")
+        self.health_tag = font.render("H: 100/100", False, "Black")
 
     # movement with keys (unused)
     def moveUp(self, amount: int = 1):
@@ -62,9 +62,8 @@ class Character():
     # point-and-click movement
     def moveToTarget(self):
         if(self.distToPoint(self.target_pos) < 1):
-            self.pos_x = int(self.pos_x) // 2 * 2
-            self.pos_y = int(self.pos_y) // 2 * 2
-            self.target_pos = self.pos_x, self.pos_y
+            self.pos_x, self.pos_y = self.target_pos
+            return
         unit_vector = self.dirToPoint(self.target_pos)
         x_comp, y_comp = unit_vector
         self.pos_x += x_comp
@@ -74,12 +73,29 @@ class Character():
     def renderBillboard(self, mouse_pos):
         if(self.rectangle().collidepoint(mouse_pos)):
             # draw name tag
-            pygame.draw.rect(screen, "Gray", self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 20)))
-            screen.blit(self.name_tag, self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 20)))
+            pygame.draw.rect(screen, "Gray", self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 32)))
+            screen.blit(self.name_tag, self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 32)))
 
             # draw health tag
-            pygame.draw.rect(screen, "Gray", self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 12)))
-            screen.blit(self.health_tag, self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 12)))
+            pygame.draw.rect(screen, "Gray", self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 16)))
+            screen.blit(self.health_tag, self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 16)))
+
+# camera class
+class Camera():
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.speed = 2
+    def move_up(self, amt: int = 1):
+        self.y -= amt * speed
+    def move_down(self, amt: int = 1):
+        self.y += amt * speed
+    def move_left(self, amt: int = 1):
+        self.x -= amt * speed
+    def move_right(self, amt: int = 1):
+        self.y += amt * speed
+
+camera = Camera
 
 # character and enemy
 character = Character(surface=font.render("@", False, "White"), name="It's You!")
@@ -116,7 +132,10 @@ while True:
     mouse = pygame.mouse.get_pressed()
 
     if(mouse[0]):
-        character.target_pos = mouse_pos
+        target_x, target_y = mouse_pos
+        target_x = target_x // 16 * 16 + 8
+        target_y = target_y // 16 * 16 + 8
+        character.target_pos = (target_x, target_y)
     character.moveToTarget()
 
     big_t += dt

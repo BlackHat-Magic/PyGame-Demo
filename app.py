@@ -2,6 +2,7 @@ import pygame, sys
 from wfc_utils import Biome, Tile, World
 from dungeon_layout_generator import rooms
 from dungeon_room_generator import Floor
+from camera import Camera
 
 # Initialize pygame, window
 pygame.init()
@@ -11,7 +12,6 @@ clock = pygame.time.Clock()
 
 # define font
 font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 16)
-text_font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 8)
 
 # background
 background = pygame.Surface((1280, 960))
@@ -47,7 +47,7 @@ class Character():
 
     # get character rectangle
     def rectangle(self):
-        return(self.surface.get_rect(center=(self.pos_x - camera.x, self.pos_y - camera.y)))
+        return(self.surface.get_rect(center=(self.pos_x, self.pos_y)))
 
     # point-and-click movement
     def moveToTarget(self):
@@ -60,36 +60,25 @@ class Character():
         self.pos_y += y_comp
     
     # render billboard
-    def renderBillboard(self, mouse_pos):
-        if(self.rectangle().collidepoint(mouse_pos)):
+    def renderBillboard(self, camera: Camera) -> None:
+        x, y = camera.get_mouse_world_position()
+        if(self.rectangle().collidepoint((x, y))):
             # draw name tag
-            pygame.draw.rect(screen, "Gray", self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 32)))
-            screen.blit(self.name_tag, self.name_tag.get_rect(center=(self.pos_x, self.pos_y - 32)))
+            relative_pos = camera.get_relative_pos((self.pos_x, self.pos_y - 32))
+            pygame.draw.rect(screen, "Gray", self.name_tag.get_rect(center=relative_pos))
+            screen.blit(self.name_tag, self.name_tag.get_rect(center=relative_pos))
 
             # draw health tag
-            pygame.draw.rect(screen, "Gray", self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 16)))
-            screen.blit(self.health_tag, self.health_tag.get_rect(center=(self.pos_x, self.pos_y - 16)))
-
-# camera class
-class Camera():
-    def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.speed = 2
-    def move_up(self, amt: float = 1):
-        self.y -= amt * self.speed
-    def move_down(self, amt: float = 1):
-        self.y += amt * self.speed
-    def move_left(self, amt: float = 1):
-        self.x -= amt * self.speed
-    def move_right(self, amt: float = 1):
-        self.x += amt * self.speed
-
-camera = Camera()
+            relative_pos = camera.get_relative_pos((self.pos_x, self.pos_y - 16))
+            pygame.draw.rect(screen, "Gray", self.health_tag.get_rect(center=relative_pos))
+            screen.blit(self.health_tag, self.health_tag.get_rect(center=relative_pos))
 
 # character and enemy
 character = Character(surface=font.render("@", False, "White"), name="It's You!")
 enemy = Character(surface=font.render("X", False, "Red"), name="Enemy Dude", pos_x=320, pos_y=240)
+
+# initialize camera
+camera = Camera()
 
 # generate dungeon
 world_floors = []
@@ -128,40 +117,12 @@ while True:
         character.target_pos = (target_x, target_y)
     character.moveToTarget()
 
-    # get keys
-    keys = pygame.key.get_pressed()
-
-    if(keys[pygame.K_w]):
-        if(keys[pygame.K_a]):
-            camera.move_up(0.7)
-            camera.move_left(0.7)
-        elif(keys[pygame.K_s]):
-            pass
-        elif(keys[pygame.K_d]):
-            camera.move_up(0.7)
-            camera.move_right(0.7)
-        else:
-            camera.move_up()
-    elif(keys[pygame.K_a]):
-        if(keys[pygame.K_s]):
-            camera.move_left(0.7)
-            camera.move_down(0.7)
-        elif(keys[pygame.K_d]):
-            pass
-        else:
-            camera.move_left()
-    elif(keys[pygame.K_s]):
-        if(keys[pygame.K_d]):
-            camera.move_down(0.7)
-            camera.move_right(0.7)
-        else:
-            camera.move_down()
-    elif(keys[pygame.K_d]):
-        camera.move_right()
+    camera.move()
     
     # render background
     screen.blit(background, (0, 0))
     
+    # render the map
     for x in range(floor.grid.shape[0]):
         for y in range(floor.grid.shape[1]):
             room = floor.grid[x, y]
@@ -170,18 +131,19 @@ while True:
             for small_x in range(room.grid.shape[0]):
                 for small_y in range(room.grid.shape[1]):
                     tile = room.grid[small_x, small_y]
-                    coordinates = ((big_x + small_x) * 16 - camera.x, (big_y + small_y) * 16 - camera.y)
+                    coordinates = ((big_x + small_x) * 16, (big_y + small_y) * 16)
                     if(tile == "w"):
-                        screen.blit(wall_char, coordinates)
+                        camera.render(screen, wall_char, coordinates)
                         continue
                     if(tile == "f"):
-                        screen.blit(floor_char, coordinates)
+                        camera.render(screen, floor_char, coordinates)
 
     # render character
-    screen.blit(character.surface, character.rectangle())
-    character.renderBillboard(mouse_pos)
-    screen.blit(enemy.surface, enemy.rectangle())
-    enemy.renderBillboard(mouse_pos)
+    camera.render(screen, character.surface, (character.pos_x, character.pos_y))
+    # camera.render(screen, character.)
+    character.renderBillboard(camera)
+    camera.render(screen, enemy.surface, (enemy.pos_x, enemy.pos_y))
+    enemy.renderBillboard(camera)
 
     # check if player collided with enemy
     if(enemy.rectangle().colliderect(character.rectangle())):

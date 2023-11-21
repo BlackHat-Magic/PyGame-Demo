@@ -77,7 +77,9 @@ class Room():
 
 class Floor():
     def __init__(self, world: World):
+        # get the rooms
         self.width, self.height = world.grid.shape
+        self.rooms = numpy.empty((self.width, self.height), dtype=object)
         self.width *= 15
         self.height *= 15
         self.start_coordinates = (0, 0)

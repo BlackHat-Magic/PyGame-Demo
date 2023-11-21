@@ -13,13 +13,16 @@ from character import Character
 pygame.init()
 screen = pygame.display.set_mode((1280, 960))
 pygame.display.set_caption("Pygame Demo")
+width, height = pygame.display.get_surface().get_size()
 clock = pygame.time.Clock()
 
 # define visuals
 font = pygame.font.Font("./graphics/font/GGBotNet_Public-Pixel-Font.ttf", 16)
 floor_char = font.render(".", False, "Gray")
 wall_char = font.render("#", False, "Gray")
-background = pygame.Surface(pygame.display.get_surface().get_size())
+floor_char_b = font.render(".", False, "White")
+wall_char_b = font.render("#", False, "White")
+background = pygame.Surface((width, height))
 background.fill("Black")
 
 # generate dungeon
@@ -45,20 +48,15 @@ character = Character(
 camera = Camera()
 
 # move character to starter room
-for room in floor.grid.flatten():
-    if(room.biome.name != "Starter"):
-        continue
-    x, y = room.coordinates
-    center_x, center_y = room.center
+character.pos_x, character.pos_y = floor.start_coordinates
+character.pos_x *= 16
+character.pos_y *= 16
+character.target_pos = (character.pos_x, character.pos_y)
 
-    # move to correct grid position
-    character.pos_x = (x * 15 + center_x + 1) * 16
-    character.pos_y = (y * 15 + center_y + 1) * 16
+# print(character.target_pos)
 
-    character.target_pos = (character.pos_x, character.pos_y)
-    width, height = pygame.display.get_surface().get_size()
-    camera.x = character.pos_x - width // 2
-    camera.y = character.pos_y - height // 2
+camera.x = character.pos_x - width // 2
+camera.y = character.pos_y - height // 2
 
 # game loop
 while True:
@@ -78,7 +76,7 @@ while True:
         target_x = (target_x + 8) // 16 * 16
         target_y = (target_y + 8) // 16 * 16
         character.target_pos = (target_x, target_y)
-    character.moveToTarget()
+    character.move_to_target()
 
     camera.move()
     
@@ -86,24 +84,31 @@ while True:
     screen.blit(background, (0, 0))
     
     # render the map
+    # for big_x in range(floor.grid.shape[0]):
+    #     for big_y in range(floor.grid.shape[1]):
+    #         room = floor.grid[big_x, big_y]
+    #         for small_x in range(room.grid.shape[0]):
+    #             for small_y in range(room.grid.shape[1]):
+    #                 coordinates = (big_x * 15 * 16 + small_x * 16, big_y * 15 * 16 + small_y * 16)
+    #                 tile = room.grid[small_x, small_y]
+    #                 if(tile == "w"):
+    #                     camera.render(screen, wall_char, coordinates)
+    #                     continue
+    #                 if(tile == "f"):
+    #                     camera.render(screen, floor_char, coordinates)
     for x in range(floor.grid.shape[0]):
         for y in range(floor.grid.shape[1]):
-            room = floor.grid[x, y]
-            big_x = x * 15
-            big_y = y * 15
-            for small_x in range(room.grid.shape[0]):
-                for small_y in range(room.grid.shape[1]):
-                    tile = room.grid[small_x, small_y]
-                    coordinates = ((big_x + small_x) * 16, (big_y + small_y) * 16)
-                    if(tile == "w"):
-                        camera.render(screen, wall_char, coordinates)
-                        continue
-                    if(tile == "f"):
-                        camera.render(screen, floor_char, coordinates)
+            tile = floor.grid[x, y]
+            coordinates = (x * 16, y * 16)
+            if(tile == "w"):
+                camera.render(screen, wall_char, coordinates)
+                continue
+            if(tile == "f"):
+                camera.render(screen, floor_char, coordinates)
 
     # render character
     camera.render(screen, character.surface, (character.pos_x, character.pos_y))
-    character.renderBillboard(camera)
+    character.render_billboard(camera)
 
     # render to window & handle clock stuff
     pygame.display.update()

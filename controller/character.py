@@ -14,17 +14,17 @@ class Character():
         self.health_tag = self.font.render("H: 100/100", False, "Black")
     
     # distance to point
-    def vecToPoint(self, point):
+    def vec_to_point(self, point):
         target_x, target_y = point
         dist_x, dist_y = target_x - self.pos_x, target_y - self.pos_y
         return(dist_x, dist_y)
-    def distToPoint(self, point):
-        dist_x, dist_y = self.vecToPoint(point)
+    def dist_to_point(self, point):
+        dist_x, dist_y = self.vec_to_point(point)
         distance = (dist_x**2 + dist_y**2)**0.5
         return(distance)
-    def dirToPoint(self, point):
-        dir_x, dir_y = self.vecToPoint(point)
-        distance = self.distToPoint(point)
+    def dir_to_point(self, point):
+        dir_x, dir_y = self.vec_to_point(point)
+        distance = self.dist_to_point(point)
         if(distance == 0):
             return(0, 0)
         unit_vector = (dir_x / distance, dir_y / distance)
@@ -35,17 +35,17 @@ class Character():
         return(self.surface.get_rect(center=(self.pos_x, self.pos_y)))
 
     # point-and-click movement
-    def moveToTarget(self):
-        if(self.distToPoint(self.target_pos) < 1):
+    def move_to_target(self):
+        if(self.dist_to_point(self.target_pos) < 1):
             self.pos_x, self.pos_y = self.target_pos
             return
-        unit_vector = self.dirToPoint(self.target_pos)
+        unit_vector = self.dir_to_point(self.target_pos)
         x_comp, y_comp = unit_vector
         self.pos_x += x_comp
         self.pos_y += y_comp
     
     # render billboard
-    def renderBillboard(self, camera: Camera) -> None:
+    def render_billboard(self, camera: Camera) -> None:
         x, y = camera.get_mouse_world_position()
         if(self.rectangle().collidepoint((x, y))):
             # draw name tag

@@ -1,4 +1,5 @@
 from wfc_utils import Biome, Tile, World
+from scipy.spatial import Delaunay
 import numpy, random
 
 sizes = {
@@ -21,6 +22,8 @@ class Room():
         self.biome = tile.biome
         self.coordinates = tile.coordinates
 
+        self.connects_to = dict()
+
         # set self size
         if(target_size):
             self.width, self.height = target_size
@@ -37,6 +40,7 @@ class Room():
         # generate empty grid
         self.grid = numpy.full((15, 15), "p", dtype=str)
         if(self.width == 0 or self.height == 0):
+            self.center = (7, 7)
             return
         
         # self center
@@ -73,7 +77,39 @@ class Room():
 
 class Floor():
     def __init__(self, world: World):
-        self.grid = numpy.empty(world.grid.shape, dtype=object)
-        for x in range(self.grid.shape[0]):
-            for y in range(self.grid.shape[1]):
-                self.grid[x, y] = Room(sizes[world.grid[x, y].biome.name], world.grid[x, y])
+        self.width, self.height = world.grid.shape
+        self.width *= 15
+        self.height *= 15
+        self.start_coordinates = (0, 0)
+        self.grid = numpy.empty((self.width, self.height), dtype=object)
+        for big_x in range(world.grid.shape[0]):
+            for big_y in range(world.grid.shape[1]):
+                tile = world.grid[big_x, big_y]
+                room = Room(sizes[tile.biome.name], tile)
+                if(room.biome.name == "Starter"):
+                    center_x, center_y = room.center
+                    start_x = big_x * 15 + center_x + 1
+                    start_y = big_y * 15 + center_y + 1
+                    self.start_coordinates = (start_x, start_y)
+                for small_x in range(room.grid.shape[0]):
+                    for small_y in range(room.grid.shape[1]):
+                        x, y = big_x * 15 + small_x, big_y * 15 + small_y
+                        self.grid[x, y] = room.grid[small_x, small_y]
+
+    def print(self):
+        for y in range(self.grid.shape[0]):
+            string = ""
+            for x in range(self.grid.shape[0]):
+                string += self.grid[x, y]
+            print(string)
+
+    def triangulate(self):
+        centers = numpy.array([tile.coordinates] for tile in self.grid.flatten())
+        tri = Delaunay(centers)
+
+        for simplex in tri.simpleces:
+            for tile1 in simplex:
+                for tile2 in simplex:
+                    if(tile1 == tile2):
+                        continue
+                    tile1.connects_to[tile2.coordinates] = False

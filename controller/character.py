@@ -12,9 +12,10 @@ class Character():
         self.font = font
         self.name_tag = self.font.render(name, False, "Black")
         self.health_tag = self.font.render("H: 100/100", False, "Black")
+        self.speed = 0.300
     
     # distance to point
-    def vec_to_point(self, point):
+    def vec_to_point(self, point) -> tuple:
         target_x, target_y = point
         dist_x, dist_y = target_x - self.pos_x, target_y - self.pos_y
         return(dist_x, dist_y)
@@ -31,18 +32,18 @@ class Character():
         return(unit_vector)
 
     # get character rectangle
-    def rectangle(self):
+    def rectangle(self) -> object:
         return(self.surface.get_rect(center=(self.pos_x, self.pos_y)))
 
     # point-and-click movement
-    def move_to_target(self):
+    def move_to_target(self, dt: float) -> None:
         if(self.dist_to_point(self.target_pos) < 1):
             self.pos_x, self.pos_y = self.target_pos
             return
         unit_vector = self.dir_to_point(self.target_pos)
         x_comp, y_comp = unit_vector
-        self.pos_x += x_comp
-        self.pos_y += y_comp
+        self.pos_x += x_comp * self.speed * dt
+        self.pos_y += y_comp * self.speed * dt
     
     # render billboard
     def render_billboard(self, camera: Camera) -> None:

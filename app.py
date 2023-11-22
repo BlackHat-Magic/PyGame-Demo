@@ -1,4 +1,4 @@
-import pygame, sys
+import pygame, sys, copy
 
 sys.path.insert(1, "./generator")
 from wfc_utils import Biome, Tile, World
@@ -30,23 +30,26 @@ wall_char = font.render("#", False, "Gray")
 
 # generate dungeon
 def create_dungeon(sizes):
-    worlds = [World(f"floor_{i}", rooms, size) for i, size in enumerate(sizes)]
-    for world in worlds:
+    floors = []
+    for i, size in enumerate(sizes):
+        world = World(f"floor_{i}", copy.deepcopy(rooms), size)
         world.generate()
-    floors = [Floor(world) for world in worlds]
+        floor = Floor(world)
+        floors.append(floor)
     return(floors)
 dungeon = create_dungeon([
     (5, 5),     # floor 1
-    (9, 9),     # floor secret 1
-    (7, 7),     # floor 2
-    (12, 12),   # floor secret 2
-    (9, 9),     # floor 3
-    (15, 15),   # floor secret 3
-    (12, 12),   # floor 4
-    (17, 17),   # floor 5
-    (20, 20)
+    (7, 7),     # floor secret 1
+    (6, 6),     # floor 2
+    (8, 8),     # floor secret 2
+    (7, 7),     # floor 3
+    (9, 9),     # floor secret 3
+    (8, 8),     # floor 4
+    (10, 10),   # floor secret 4
+    (9, 9)      # floor 5
 ])
 floor = dungeon[0]
+centers, tree = floor.generate_hallways()
 
 # character and enemy
 character = Character(
@@ -73,7 +76,7 @@ main_menu = False
 # game loop
 while True:
     dt = clock.tick(120)
-    
+
     # check for events
     for event in pygame.event.get():
         if(event.type == pygame.QUIT):
@@ -82,6 +85,15 @@ while True:
             continue
         if(event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             paused = not paused
+        if(event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+            floor = create_dungeon([(15, 15)])[0]
+            centers, tree = floor.generate_hallways()
+            character.pos_x, character.pos_y = floor.start_coordinates
+            character.pos_x *= 16
+            character.pos_y *= 16
+            character.target_pos = (character.pos_x, character.pos_y)
+            camera.x = character.pos_x - width // 2
+            camera.y = character.pos_y - height // 2
     
     # get mouse
     mouse_pos = pygame.mouse.get_pos()
@@ -100,8 +112,8 @@ while True:
 
     if(not paused):
         # player controlled stuff
-        character.move_to_target()
-        camera.move()
+        character.move_to_target(dt)
+        camera.move(dt)
 
         # enemy stuff
     
@@ -110,6 +122,20 @@ while True:
     
     # render the map
     render_dungeon(floor, camera, screen, wall_char, floor_char)
+
+    # debug: render the connections
+    for edge in tree.edges:
+        x1, y1 = centers[edge[0]]
+        x1 *= 16
+        y1 *= 16
+        room1_center = (int(x1 - camera.x), int(y1 - camera.y))
+
+        x2, y2 = centers[edge[1]]
+        x2 *= 16
+        y2 *= 16
+        room2_center = (int(x2 - camera.x), int(y2 - camera.y))
+
+        pygame.draw.line(screen, (0, 0, 255), room1_center, room2_center)
 
     # render character
     camera.render(screen, character.surface, (character.pos_x, character.pos_y))
@@ -122,6 +148,11 @@ while True:
     # render main menu
     if(main_menu):
         render_main_menu(screen, font)
+    
+    # render fps counter
+    fps = 1 // (dt / 1000)
+    # fps_surface = font.render(f"{fps} FPS", False, "Gray")
+    # screen.blit(fps_surface, (0, 0))
 
     # render to window & handle clock stuff
     pygame.display.update()

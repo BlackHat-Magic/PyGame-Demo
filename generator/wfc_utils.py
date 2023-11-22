@@ -281,7 +281,6 @@ class World():
         return(True)
     
     def generate(self) -> None:
-        # soon (TM)
         while not self.all_collapsed():
             observed = self.observe()
             if(not observed):

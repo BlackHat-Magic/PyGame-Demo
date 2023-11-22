@@ -1,6 +1,6 @@
 from wfc_utils import Biome, Tile, World
 from scipy.spatial import Delaunay
-import numpy, random
+import numpy, random, networkx
 
 sizes = {
     "Empty": (0, 0, 0, 0),
@@ -80,6 +80,8 @@ class Floor():
         # get the rooms
         self.width, self.height = world.grid.shape
         self.rooms = numpy.empty((self.width, self.height), dtype=object)
+        
+        # set up the grid of walls, pits, floors, etc
         self.width *= 15
         self.height *= 15
         self.start_coordinates = (0, 0)
@@ -88,6 +90,7 @@ class Floor():
             for big_y in range(world.grid.shape[1]):
                 tile = world.grid[big_x, big_y]
                 room = Room(sizes[tile.biome.name], tile)
+                self.rooms[big_x, big_y] = room
                 if(room.biome.name == "Starter"):
                     center_x, center_y = room.center
                     start_x = big_x * 15 + center_x + 1
@@ -98,20 +101,50 @@ class Floor():
                         x, y = big_x * 15 + small_x, big_y * 15 + small_y
                         self.grid[x, y] = room.grid[small_x, small_y]
 
-    def print(self):
-        for y in range(self.grid.shape[0]):
-            string = ""
-            for x in range(self.grid.shape[0]):
-                string += self.grid[x, y]
-            print(string)
+    def generate_hallways(self) -> tuple:
+        # get array of centers
+        centers_list = []
+        # for room in self.rooms.flatten():
+        #     if(room.biome.name == "Boss" or room.biome.name == "Ending"):
+        #         continue
+        #     centers_list.append(room.center)
+        for x in range(self.rooms.shape[0]):
+            for y in range(self.rooms.shape[1]):
+                room = self.rooms[x, y]
+                if(room.biome.name == "Boss" or room.biome.name == "Ending" or room.biome.name == "Empty"):
+                    continue
+                true_x = x * 15 + room.center[0]
+                true_y = y * 15 + room.center[1]
+                centers_list.append((true_x, true_y))
+        centers = numpy.array(centers_list)
 
-    def triangulate(self):
-        centers = numpy.array([tile.coordinates] for tile in self.grid.flatten())
+        # Delaunay Trianglulation
         tri = Delaunay(centers)
 
-        for simplex in tri.simpleces:
-            for tile1 in simplex:
-                for tile2 in simplex:
-                    if(tile1 == tile2):
-                        continue
-                    tile1.connects_to[tile2.coordinates] = False
+        # generate graph
+        graph = networkx.Graph()
+        for simplex in tri.simplices:
+            # indeces of original nodes
+            u = simplex[0]
+            v = simplex[1]
+            w = simplex[2]
+
+            # coordinates of nodes
+            u_x, u_y = centers_list[u]
+            v_x, v_y = centers_list[v]
+            w_x, w_y = centers_list[w]
+
+            # distances
+            dist_uv = ((u_x - v_x) ** 2 + (u_y - v_y) ** 2) ** 0.5
+            dist_vw = ((v_x - w_x) ** 2 + (v_y - w_y) ** 2) ** 0.5
+            dist_uw = ((u_x - w_x) ** 2 + (u_y - w_y) ** 2) ** 0.5
+
+            # add to graph
+            graph.add_edge(u, v, weight=dist_uv)
+            graph.add_edge(v, w, weight=dist_vw)
+            graph.add_edge(u, w, weight=dist_uw)
+        
+        # minimum spanning tree
+        tree = networkx.minimum_spanning_tree(graph)
+
+        return(centers, tree)
